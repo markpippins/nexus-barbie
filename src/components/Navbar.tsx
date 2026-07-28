@@ -32,6 +32,8 @@ interface NavbarProps {
   isRefreshing: boolean;
   onManualRefresh: () => void;
   activeView: string;
+  apiMode?: 'live' | 'mock';
+  onApiModeChange?: (mode: 'live' | 'mock') => void;
 }
 
 export const Navbar: React.FC<NavbarProps> = ({
@@ -47,7 +49,9 @@ export const Navbar: React.FC<NavbarProps> = ({
   onToggleMobileMenu,
   isRefreshing,
   onManualRefresh,
-  activeView
+  activeView,
+  apiMode = registryApi.getApiMode(),
+  onApiModeChange
 }) => {
   const { theme, setTheme } = useTheme();
 
@@ -116,10 +120,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => {
                 registryApi.setApiMode('live');
-                onManualRefresh();
+                onApiModeChange ? onApiModeChange('live') : onManualRefresh();
               }}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold transition-all ${
-                registryApi.getApiMode() === 'live'
+                apiMode === 'live'
                   ? 'bg-emerald-500 text-white shadow-sm ring-1 ring-emerald-400'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
@@ -132,10 +136,10 @@ export const Navbar: React.FC<NavbarProps> = ({
             <button
               onClick={() => {
                 registryApi.setApiMode('mock');
-                onManualRefresh();
+                onApiModeChange ? onApiModeChange('mock') : onManualRefresh();
               }}
               className={`flex items-center gap-1 rounded-md px-2 py-1 text-[11px] font-bold transition-all ${
-                registryApi.getApiMode() === 'mock'
+                apiMode === 'mock'
                   ? 'bg-amber-500 text-white shadow-sm ring-1 ring-amber-400'
                   : 'text-[var(--text-secondary)] hover:text-[var(--text-primary)]'
               }`}
@@ -149,15 +153,15 @@ export const Navbar: React.FC<NavbarProps> = ({
           {/* System Status Display from Professional Polish theme */}
           <div className="hidden lg:flex flex-col items-end pr-2 border-r border-[var(--border-color)]">
             <span className="text-[10px] uppercase text-slate-400 font-bold tracking-wider">
-              {registryApi.getApiMode() === 'live' ? 'Live Backend' : 'Mock Client'}
+              {apiMode === 'live' ? 'Live Backend' : 'Mock Client'}
             </span>
             <span className={`text-xs font-bold flex items-center gap-1.5 ${
-              registryApi.getApiMode() === 'live' ? 'text-emerald-400' : 'text-amber-400'
+              apiMode === 'live' ? 'text-emerald-400' : 'text-amber-400'
             }`}>
               <span className={`w-2 h-2 rounded-full ${
-                registryApi.getApiMode() === 'live' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-amber-500'
+                apiMode === 'live' ? 'bg-emerald-500 shadow-[0_0_8px_rgba(34,197,94,0.6)] animate-pulse' : 'bg-amber-500'
               }`}></span>
-              {registryApi.getApiMode() === 'live' ? 'REST ONLINE' : 'MOCK ACTIVE'}
+              {apiMode === 'live' ? 'REST ONLINE' : 'MOCK ACTIVE'}
             </span>
           </div>
           

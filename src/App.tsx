@@ -24,6 +24,14 @@ import { registryApi } from './lib/api';
 export default function App() {
   const [activeTab, setActiveTab] = useState<ActiveTab>('aggregate');
 
+  // API Mode State
+  const [apiMode, setApiModeState] = useState<'live' | 'mock'>(registryApi.getApiMode());
+
+  const handleApiModeChange = (mode: 'live' | 'mock') => {
+    registryApi.setApiMode(mode);
+    setApiModeState(mode);
+  };
+
   // Search & Filter state
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedSystemFilter, setSelectedSystemFilter] = useState('all');
@@ -78,7 +86,7 @@ export default function App() {
   // Initial load and periodic polling
   useEffect(() => {
     fetchAllData();
-  }, [fetchAllData, refreshTrigger]);
+  }, [fetchAllData, refreshTrigger, apiMode]);
 
   useEffect(() => {
     if (autoRefreshInterval <= 0) return;
@@ -135,6 +143,8 @@ export default function App() {
             setRefreshTrigger(t => t + 1);
           }}
           activeView={activeTab}
+          apiMode={apiMode}
+          onApiModeChange={handleApiModeChange}
         />
 
         {/* Main Application Layout with Left Sidebar Navigation */}
@@ -154,6 +164,8 @@ export default function App() {
             onOpenRegisterModal={() => handleOpenCreateModal('register-service')}
             isMobileOpen={isMobileMenuOpen}
             onCloseMobile={() => setIsMobileMenuOpen(false)}
+            apiMode={apiMode}
+            onApiModeChange={handleApiModeChange}
           />
 
           {/* Center Stage Main Content Area */}

@@ -5,6 +5,14 @@ import { createServer as createViteServer } from "vite";
 const app = express();
 app.use(express.json());
 
+// Rewrite flat /api/v1/* requests to /api/v1/registry/* for local dev server compatibility
+app.use((req, res, next) => {
+  if (req.url.startsWith("/api/v1/") && !req.url.startsWith("/api/v1/registry/")) {
+    req.url = req.url.replace("/api/v1/", "/api/v1/registry/");
+  }
+  next();
+});
+
 const PORT = 3000;
 
 // Pre-seeded operational data

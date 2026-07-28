@@ -1,6 +1,6 @@
 # Platform Operations Dashboard - System Drift & Architecture Report
 
-**Environment**: `main` branch  
+**Environment**: `dev` branch  
 **Last Audit Date**: 2026-07-28  
 **Repository**: `markpippins/nexus-barbie`  
 **Deployment Target**: Cloud Run / AI Studio (Port 3000)
@@ -15,7 +15,7 @@ This **Drift Report** details the current operational topology, API synchronizat
 
 ## 1. Branch & Source Control Status
 
-- **Active Branch**: `main`
+- **Active Branch**: `dev`
 - **Upstream Sync**: Synchronized with `origin/main` (commit `6d33536`)
 - **Git Remote**: `https://github.com/markpippins/nexus-barbie.git`
 - **Build Status**: Verified clean compile & zero linter errors.

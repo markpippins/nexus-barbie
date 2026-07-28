@@ -4,54 +4,98 @@
 
 export type ThemeMode = 'dark' | 'light' | 'steel';
 
-export type HealthStatus = 'healthy' | 'degraded' | 'critical' | 'offline';
+export type HealthStatus = 'ACTIVE' | 'DEGRADED' | 'CRITICAL' | 'OFFLINE' | 'healthy' | 'degraded' | 'critical' | 'offline';
 
 export type Environment = 'production' | 'staging' | 'development' | 'qa';
 
+export interface CategoryNested {
+  id?: number;
+  name?: string;
+}
+
+export interface LanguageNested {
+  id?: number;
+  name?: string;
+}
+
+export interface FrameworkNested {
+  id?: number;
+  name?: string;
+  category?: CategoryNested | string;
+  language?: LanguageNested | string;
+}
+
+export interface ServiceTypeNested {
+  id?: number;
+  name?: string;
+}
+
+export interface ServerTypeNested {
+  id?: number;
+  name?: string;
+}
+
+export interface EnvironmentTypeNested {
+  id?: number;
+  name?: string;
+}
+
+export interface OperatingSystemNested {
+  id?: number;
+  name?: string;
+}
+
+export interface SystemTypeNested {
+  id?: number;
+  name?: string;
+}
+
 export interface Service {
-  id: string;
+  id: number;
   name: string;
-  type: string;
+  description?: string;
   version: string;
   status: HealthStatus;
-  systemId: string;
-  systemName: string;
-  endpoint: string;
-  environment: Environment;
-  hostedServicesCount: number;
-  hostedServices: string[];
-  frameworkId?: string;
-  frameworkName?: string;
-  serverId?: string;
+  framework?: FrameworkNested;
+  type?: ServiceTypeNested | string;
+  frameworkId?: number;
+  serviceTypeId?: number;
+  // Optional legacy display helpers
+  systemName?: string;
+  endpoint?: string;
+  hostedServicesCount?: number;
+  hostedServices?: string[];
   serverHostname?: string;
-  lastHeartbeat: string;
-  uptimePercent: number;
-  rps: number;
-  latencyMs: number;
-  errorRate: number;
-  description?: string;
+  rps?: number;
+  latencyMs?: number;
+  errorRate?: number;
+  uptimePercent?: number;
 }
 
 export interface Server {
-  id: string;
-  name: string;
+  id: number;
   hostname: string;
   ipAddress: string;
-  serverType: string;
-  operatingSystem: string;
-  environment: Environment;
-  status: HealthStatus;
-  cpuUsage: number; // percentage
-  memoryUsage: number; // percentage
-  diskUsage: number; // percentage
-  datacenterRegion: string;
-  activePodsCount: number;
-  lastPing: string;
+  cpuCores?: number;
+  type?: ServerTypeNested | string;
+  environmentType?: EnvironmentTypeNested | string;
+  operatingSystem?: OperatingSystemNested | string;
+  name?: string;
+  status?: HealthStatus;
+  // Optional legacy display helpers
+  serverType?: string;
+  datacenterRegion?: string;
+  cpuUsage?: number;
+  memoryUsage?: number;
+  diskUsage?: number;
+  activePodsCount?: number;
+  lastPing?: string;
+  environment?: Environment;
 }
 
 export interface Deployment {
-  id: string;
-  serviceId: string;
+  id: string | number;
+  serviceId: string | number;
   serviceName: string;
   environment: Environment;
   version: string;
@@ -65,33 +109,35 @@ export interface Deployment {
 }
 
 export interface Framework {
-  id: string;
+  id: string | number;
   name: string;
-  category: string;
-  language: string;
+  category: string | CategoryNested;
+  language: string | LanguageNested;
   version: string;
   servicesCount?: number;
 }
 
 export interface Library {
-  id: string;
+  id: string | number;
   name: string;
-  category: string;
-  language: string;
+  category: string | CategoryNested;
+  language: string | LanguageNested;
   version: string;
   vulnerabilitiesCount: number;
 }
 
 export interface System {
-  id: string;
+  id: number;
   name: string;
   description: string;
-  owner: string;
-  environment: Environment;
-  status: HealthStatus;
-  servicesCount: number;
-  services: string[]; // List of service names
-  tier: 'Tier 1 - Critical' | 'Tier 2 - Important' | 'Tier 3 - Standard';
+  systemType?: SystemTypeNested | string;
+  // Optional legacy display helpers
+  owner?: string;
+  environment?: Environment;
+  status?: HealthStatus;
+  servicesCount?: number;
+  services?: string[];
+  tier?: string;
 }
 
 export type LookupType =
@@ -105,7 +151,7 @@ export type LookupType =
   | 'library-languages';
 
 export interface LookupEntry {
-  id: string;
+  id: string | number;
   lookupType: LookupType;
   key: string;
   name: string;
@@ -134,7 +180,7 @@ export interface MetricPoint {
 
 export interface EntitySelection {
   type: 'service' | 'server' | 'deployment' | 'system' | 'framework' | 'library';
-  id: string;
+  id: string | number;
   name: string;
   data?: any;
 }
@@ -144,6 +190,9 @@ export interface PaginationMeta {
   size: number;
   totalItems: number;
   totalPages: number;
+  per_page?: number;
+  total?: number;
+  last_page?: number;
 }
 
 export interface PaginatedResponse<T> {

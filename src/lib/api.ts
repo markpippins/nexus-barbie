@@ -68,66 +68,106 @@ async function fetchJson<T>(url: string, options?: RequestInit): Promise<T> {
 
 // --- NORMALIZER HELPERS ---
 function normalizeHealthStatus(status: any): HealthStatus {
-  if (!status) return 'offline';
-  const s = String(status).toLowerCase();
-  if (['healthy', 'active', 'running', 'ok'].includes(s)) return 'healthy';
-  if (['degraded', 'warning'].includes(s)) return 'degraded';
-  if (['critical', 'unhealthy', 'error', 'failed'].includes(s)) return 'critical';
-  return 'offline';
+  if (!status) return 'OFFLINE';
+  const s = String(status).toUpperCase();
+  if (['HEALTHY', 'ACTIVE', 'RUNNING', 'OK'].includes(s)) return 'ACTIVE';
+  if (['DEGRADED', 'WARNING'].includes(s)) return 'DEGRADED';
+  if (['CRITICAL', 'UNHEALTHY', 'ERROR', 'FAILED'].includes(s)) return 'CRITICAL';
+  return 'OFFLINE';
+}
+
+function parseIntegerId(val: any, defaultId = 1): number {
+  if (typeof val === 'number') return Math.floor(val);
+  if (!val) return defaultId;
+  const digits = String(val).replace(/\D/g, '');
+  return digits ? parseInt(digits, 10) : defaultId;
 }
 
 function normalizeService(s: any): Service {
   if (!s) return {} as Service;
-  const fwName = s.frameworkName || (typeof s.framework === 'object' ? s.framework?.name : s.framework) || 'Node.js Express';
-  const sysName = s.systemName || (typeof s.system === 'object' ? s.system?.name : s.system) || 'Payments & Financial Core';
-  const srvHost = s.serverHostname || (typeof s.server === 'object' ? s.server?.hostname : s.server) || 'k8s-node-01';
+
+  const fwObj = typeof s.framework === 'object' && s.framework !== null ? s.framework : null;
+  const fwCategory = typeof fwObj?.category === 'object' ? fwObj.category : { id: 1, name: String(fwObj?.category || 'Backend Framework') };
+  const fwLanguage = typeof fwObj?.language === 'object' ? fwObj.language : { id: 1, name: String(fwObj?.language || 'TypeScript') };
+  const framework: FrameworkNested = {
+    id: parseIntegerId(fwObj?.id || s.frameworkId, 1),
+    name: fwObj?.name || (typeof s.framework === 'string' ? s.framework : (s.frameworkName || 'Node.js Express')),
+    category: fwCategory,
+    language: fwLanguage
+  };
+
+  const typeObj = typeof s.type === 'object' && s.type !== null ? s.type : null;
+  const serviceType: ServiceTypeNested = {
+    id: parseIntegerId(typeObj?.id || s.serviceTypeId, 1),
+    name: typeObj?.name || (typeof s.type === 'string' ? s.type : (s.serviceType || 'Microservice'))
+  };
+
+  const parsedId = parseIntegerId(s.id, 1);
 
   return {
-    id: String(s.id ?? 'svc-unknown'),
-    name: s.name || s.serviceName || 'unknown-service',
-    type: s.type || s.serviceType || 'Microservice',
+    id: parsedId,
+    name: s.name || s.serviceName || `service-${parsedId}`,
+    description: s.description || '',
     version: s.version || '1.0.0',
     status: normalizeHealthStatus(s.status ?? s.healthStatus),
-    systemId: String(s.systemId ?? s.system?.id ?? 'sys-01'),
-    systemName: sysName,
-    endpoint: s.endpoint || s.url || 'https://api.internal/v1',
-    environment: (s.environment || 'production').toLowerCase() as Environment,
+    framework,
+    type: serviceType,
+    frameworkId: parseIntegerId(s.frameworkId || framework.id, 1),
+    serviceTypeId: parseIntegerId(s.serviceTypeId || serviceType.id, 1),
+    // Optional legacy display fallbacks
+    systemName: s.systemName || (typeof s.system === 'object' ? s.system?.name : undefined),
+    endpoint: s.endpoint,
     hostedServicesCount: s.hostedServicesCount ?? (Array.isArray(s.hostedServices) ? s.hostedServices.length : 0),
     hostedServices: Array.isArray(s.hostedServices) ? s.hostedServices : [],
-    frameworkId: s.frameworkId ? String(s.frameworkId) : (s.framework?.id ? String(s.framework.id) : undefined),
-    frameworkName: fwName,
-    serverId: s.serverId ? String(s.serverId) : (s.server?.id ? String(s.server.id) : undefined),
-    serverHostname: srvHost,
-    lastHeartbeat: s.lastHeartbeat || s.updatedAt || new Date().toISOString(),
-    uptimePercent: typeof s.uptimePercent === 'number' ? s.uptimePercent : 99.9,
-    rps: typeof s.rps === 'number' ? s.rps : 0,
-    latencyMs: typeof s.latencyMs === 'number' ? s.latencyMs : 0,
-    errorRate: typeof s.errorRate === 'number' ? s.errorRate : 0,
-    description: s.description || ''
+    serverHostname: s.serverHostname || (typeof s.server === 'object' ? s.server?.hostname : undefined),
+    rps: typeof s.rps === 'number' ? s.rps : undefined,
+    latencyMs: typeof s.latencyMs === 'number' ? s.latencyMs : undefined,
+    errorRate: typeof s.errorRate === 'number' ? s.errorRate : undefined,
+    uptimePercent: typeof s.uptimePercent === 'number' ? s.uptimePercent : undefined
   };
 }
 
 function normalizeServer(s: any): Server {
   if (!s) return {} as Server;
-  const sType = typeof s.serverType === 'object' ? s.serverType?.name : (s.serverType || s.serverTypeId || 'Compute Optimized');
-  const osName = typeof s.operatingSystem === 'object' ? s.operatingSystem?.name : (s.operatingSystem || s.operatingSystemId || 'Linux');
-  const region = s.datacenterRegion || s.region || 'us-east-1';
+
+  const typeObj = typeof s.type === 'object' && s.type !== null ? s.type : null;
+  const serverType: ServerTypeNested = {
+    id: parseIntegerId(typeObj?.id, 1),
+    name: typeObj?.name || (typeof s.type === 'string' ? s.type : (s.serverType || 'c6i.2xlarge Compute Optimized'))
+  };
+
+  const envObj = typeof s.environmentType === 'object' && s.environmentType !== null ? s.environmentType : null;
+  const envType: EnvironmentTypeNested = {
+    id: parseIntegerId(envObj?.id, 1),
+    name: envObj?.name || (typeof s.environmentType === 'string' ? s.environmentType : (s.environment || 'Production'))
+  };
+
+  const osObj = typeof s.operatingSystem === 'object' && s.operatingSystem !== null ? s.operatingSystem : null;
+  const osType: OperatingSystemNested = {
+    id: parseIntegerId(osObj?.id, 1),
+    name: osObj?.name || (typeof s.operatingSystem === 'string' ? s.operatingSystem : 'Ubuntu 22.04 LTS')
+  };
+
+  const parsedId = parseIntegerId(s.id, 1);
 
   return {
-    id: String(s.id ?? 'srv-unknown'),
-    name: s.name || s.hostname || 'server-node',
-    hostname: s.hostname || s.name || 'node.internal',
+    id: parsedId,
+    hostname: s.hostname || s.name || `node-${parsedId}.internal`,
     ipAddress: s.ipAddress || s.ip || '10.0.0.1',
-    serverType: String(sType),
-    operatingSystem: String(osName),
-    environment: (s.environment || 'production').toLowerCase() as Environment,
+    cpuCores: typeof s.cpuCores === 'number' ? s.cpuCores : (s.cpuCores ? Number(s.cpuCores) : 8),
+    type: serverType,
+    environmentType: envType,
+    operatingSystem: osType,
+    name: s.name || s.hostname || `server-${parsedId}`,
     status: normalizeHealthStatus(s.status),
-    cpuUsage: typeof s.cpuUsage === 'number' ? s.cpuUsage : 35,
-    memoryUsage: typeof s.memoryUsage === 'number' ? s.memoryUsage : 50,
-    diskUsage: typeof s.diskUsage === 'number' ? s.diskUsage : 40,
-    datacenterRegion: region,
-    activePodsCount: s.activePodsCount ?? 8,
-    lastPing: s.lastPing || s.updatedAt || new Date().toISOString()
+    // Optional legacy display fallbacks
+    serverType: typeof serverType === 'object' ? serverType.name : String(serverType),
+    datacenterRegion: s.datacenterRegion,
+    cpuUsage: typeof s.cpuUsage === 'number' ? s.cpuUsage : undefined,
+    memoryUsage: typeof s.memoryUsage === 'number' ? s.memoryUsage : undefined,
+    diskUsage: typeof s.diskUsage === 'number' ? s.diskUsage : undefined,
+    activePodsCount: typeof s.activePodsCount === 'number' ? s.activePodsCount : undefined,
+    lastPing: s.lastPing
   };
 }
 
@@ -136,8 +176,8 @@ function normalizeDeployment(d: any): Deployment {
   const svcName = d.serviceName || (typeof d.service === 'object' ? d.service?.name : d.service) || 'unknown-service';
 
   return {
-    id: String(d.id ?? 'dep-unknown'),
-    serviceId: String(d.serviceId ?? d.service?.id ?? 'svc-01'),
+    id: parseIntegerId(d.id, 1),
+    serviceId: parseIntegerId(d.serviceId ?? d.service?.id, 1),
     serviceName: svcName,
     environment: (d.environment || 'production').toLowerCase() as Environment,
     version: d.version || 'v1.0.0',
@@ -156,7 +196,7 @@ function normalizeFramework(f: any): Framework {
   const cat = typeof f.category === 'object' ? f.category?.name : f.category;
   const lang = typeof f.language === 'object' ? f.language?.name : f.language;
   return {
-    id: String(f.id ?? 'fw-unknown'),
+    id: parseIntegerId(f.id, 1),
     name: f.name || 'Framework',
     category: cat || 'Backend',
     language: lang || 'TypeScript',
@@ -170,7 +210,7 @@ function normalizeLibrary(l: any): Library {
   const cat = typeof l.category === 'object' ? l.category?.name : l.category;
   const lang = typeof l.language === 'object' ? l.language?.name : l.language;
   return {
-    id: String(l.id ?? 'lib-unknown'),
+    id: parseIntegerId(l.id, 1),
     name: l.name || 'Library',
     category: cat || 'Utility',
     language: lang || 'TypeScript',
@@ -181,26 +221,34 @@ function normalizeLibrary(l: any): Library {
 
 function normalizeSystem(sys: any): System {
   if (!sys) return {} as System;
-  const svcs = Array.isArray(sys.services)
-    ? sys.services.map((s: any) => (typeof s === 'object' ? s.name || s.id : String(s)))
-    : [];
+
+  const sysTypeObj = typeof sys.systemType === 'object' && sys.systemType !== null ? sys.systemType : null;
+  const systemType: SystemTypeNested = {
+    id: parseIntegerId(sysTypeObj?.id, 1),
+    name: sysTypeObj?.name || (typeof sys.systemType === 'string' ? sys.systemType : 'Core System Domain')
+  };
+
+  const parsedId = parseIntegerId(sys.id, 1);
+
   return {
-    id: String(sys.id ?? 'sys-unknown'),
+    id: parsedId,
     name: sys.name || 'System Domain',
     description: sys.description || '',
-    owner: sys.owner || 'DevOps',
-    environment: (sys.environment || 'production').toLowerCase() as Environment,
-    status: normalizeHealthStatus(sys.status),
-    servicesCount: sys.servicesCount ?? svcs.length,
-    services: svcs,
-    tier: sys.tier || 'Tier 2 - Important'
+    systemType,
+    // Optional legacy display fallbacks
+    owner: sys.owner,
+    environment: sys.environment ? String(sys.environment).toLowerCase() as Environment : undefined,
+    status: sys.status ? normalizeHealthStatus(sys.status) : undefined,
+    servicesCount: sys.servicesCount,
+    services: Array.isArray(sys.services) ? sys.services : [],
+    tier: sys.tier
   };
 }
 
 function normalizeLookupEntry(lk: any, type: LookupType): LookupEntry {
   if (!lk) return {} as LookupEntry;
   return {
-    id: String(lk.id ?? 'lk-unknown'),
+    id: parseIntegerId(lk.id, 1),
     lookupType: type,
     key: lk.key || lk.code || String(lk.id || 'key'),
     name: lk.name || lk.label || lk.key || 'Entry',
@@ -213,19 +261,30 @@ function normalizePaginatedResponse<T>(res: any, entityNormalizer: (item: any) =
     const data = res.map(entityNormalizer);
     return {
       data,
-      meta: { page: 1, size: data.length, totalItems: data.length, totalPages: 1 }
+      meta: { page: 1, size: data.length, totalItems: data.length, totalPages: 1, per_page: data.length, total: data.length, last_page: 1 }
     };
   }
   if (res && Array.isArray(res.data)) {
     const data = res.data.map(entityNormalizer);
     const meta = res.meta || {};
-    const page = meta.page || 1;
-    const size = meta.per_page || meta.size || data.length || 10;
+    const page = meta.page || meta.current_page || 1;
+    const size = meta.per_page || meta.pageSize || meta.size || data.length || 10;
     const totalItems = meta.total ?? meta.totalItems ?? data.length;
-    const totalPages = (meta.last_page ?? meta.totalPages ?? Math.ceil(totalItems / (size || 1))) || 1;
-    return { data, meta: { page, size, totalItems, totalPages } };
+    const totalPages = meta.last_page ?? meta.totalPages ?? (Math.ceil(totalItems / (size || 1)) || 1);
+    return {
+      data,
+      meta: {
+        page,
+        size,
+        totalItems,
+        totalPages,
+        per_page: size,
+        total: totalItems,
+        last_page: totalPages
+      }
+    };
   }
-  return { data: [], meta: { page: 1, size: 0, totalItems: 0, totalPages: 1 } };
+  return { data: [], meta: { page: 1, size: 0, totalItems: 0, totalPages: 1, per_page: 0, total: 0, last_page: 1 } };
 }
 
 export const registryApi = {
